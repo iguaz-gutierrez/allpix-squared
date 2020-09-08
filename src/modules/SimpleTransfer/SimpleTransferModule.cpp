@@ -93,9 +93,58 @@ void SimpleTransferModule::run(unsigned int) {
         }
 
         // Find the nearest pixel
-        auto xpixel = static_cast<int>(std::round(position.x() / model_->getPixelSize().x()));
-        auto ypixel = static_cast<int>(std::round(position.y() / model_->getPixelSize().y()));
+        // PACO: Squared pixels. Commented on 08/09/20.
+        //auto xpixel = static_cast<int>(std::round(position.x() / model_->getPixelSize().x()));
+        //auto ypixel = static_cast<int>(std::round(position.y() / model_->getPixelSize().y()));
 
+        // PACO: Hexagonal pixels. Implemented on 4/5/20.
+	
+	// Hexagon dimmensions.
+	double sizex = model_->getPixelSize().x();
+	double radius = std::sqrt(3)/3.0 * sizex;
+	double height = 0.5 * radius;
+	
+	// Charge positions.
+	double posx = position.x();
+	double posy = position.y();
+	// Positions in (q,r) reference.
+	int r = static_cast<int> ((posy + height) / (3.0 * height));
+	int q = 0;
+	if(r%2 == 0)
+	  q = static_cast<int> ((posx + (0.5 * sizex)) / sizex);
+	else
+	  q = static_cast<int> (posx / sizex);
+	// Charge between 3 hexagonal pixels.
+	double y1 = posy + height - (r * 3.0 * height);
+	if(y1 > (2.0 * height))
+	{
+	   double x1 = posx - (q * sizex);
+	   if(r%2 == 1)
+	     x1 = x1 - (0.5 * sizex);
+	   double xlimit = 0.5 * sizex * ((3.0 * height) - y1) / height;
+	   if(r%2 == 0)
+	   {
+	     if(x1 > xlimit)
+	       {r++;}
+	     else if(x1 < -xlimit)
+	       { q--; r++;}
+	   }
+	   else
+	   {
+	     if(x1 > xlimit)
+	       {q++; r++;}
+	     else if(x1 < -xlimit)
+	       {r++;}
+	   }
+	}
+	//std::cout << "Charge position in x,y: " << posx << ", "
+	//	  << posy << ", Idem in q,r: " << q << ", " << r << std::endl;
+        //getchar();
+	
+	// Nearest pixel for hexagonal pixels.
+	auto xpixel = q;
+	auto ypixel = r;
+        
         // Ignore if out of pixel grid
         if(!detector_->isWithinPixelGrid(xpixel, ypixel)) {
             LOG(TRACE) << "Skipping set of " << propagated_charge.getCharge() << " propagated charges at "
